@@ -1,0 +1,8 @@
+{
+  "name": "wnioski-o-promocje",
+  "private": true,
+  "description": "Google Apps Script: generator tabeli wniosku o promowanie (SLO/SLSP) z eksportu Klasyfikacja z Librusa",
+  "scripts": {
+    "test": "node tests/run.js && node tests/integration.js"
+  }
+}
