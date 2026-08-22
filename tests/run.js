@@ -89,21 +89,29 @@ ok('ocena nierozpoznana daje uwagę', !!ctx.ocenaNaTekst('bardzo dobry+').uwaga)
 eq('normalizacja: sufiks SLO', ctx.normalizujNazwe('Rzeźba SLO'), 'rzezba');
 eq('normalizacja: myślnik', ctx.normalizujNazwe('Tutorial - nauki ścisłe'), 'tutorial nauki scisle');
 eq('normalizacja: diakrytyki', ctx.normalizujNazwe('Język Angielski'), 'jezyk angielski');
+eq('normalizacja: oznaczenie klasy', ctx.normalizujNazwe('biologia kl. 2'), 'biologia');
+eq('normalizacja: rozszerzenie + klasa', ctx.normalizujNazwe('język polski R kl. 3'), 'jezyk polski r');
+eq('normalizacja: ta sama pozycja w kolejnych latach',
+  ctx.normalizujNazwe('biologia R kl. 2'), ctx.normalizujNazwe('biologia R kl. 4'));
+eq('etykieta bez oznaczenia klasy', ctx.wyczyscNazwe('biologia R kl. 2'), 'biologia R');
+ok('wykrycie rozszerzenia', ctx.czyRozszerzenie('historia R kl. 4'));
+ok('bez rozszerzenia: rysunek i malarstwo', !ctx.czyRozszerzenie('rysunek i malarstwo kl. 3'));
+ok('bez rozszerzenia: mała litera r w nazwie', !ctx.czyRozszerzenie('podstawy projektowania kl. 1'));
 
 // ---------------------------------------------------------------------------
 // 2. Routing SLO
 // ---------------------------------------------------------------------------
 const SLO = ctx.pobierzUklad('SLO');
 const ocenySLO = [
-  { przedmiot: 'Język polski', ocena: '5' },
-  { przedmiot: 'Język angielski', ocena: '4' },
-  { przedmiot: 'Język francuski', ocena: '3' },
-  { przedmiot: 'Matematyka', ocena: '2' },
-  { przedmiot: 'Etyka', ocena: 'zal' },
-  { przedmiot: 'Historia', ocena: '5' },
-  { przedmiot: 'Tutorial - nauki ścisłe', ocena: '4' },
-  { przedmiot: 'Tutorial - nauki społeczne', ocena: '3' },
-  { przedmiot: 'Fotografia SLO', ocena: '6' },
+  { przedmiot: 'język polski kl. 3', ocena: '5' },
+  { przedmiot: 'język angielski', ocena: '4' },
+  { przedmiot: 'język francuski', ocena: '3' },
+  { przedmiot: 'matematyka kl. 3', ocena: '2' },
+  { przedmiot: 'etyka kl. 3', ocena: 'zal' },
+  { przedmiot: 'historia kl. 3', ocena: '5' },
+  { przedmiot: 'biologia R kl. 3', ocena: '4' },
+  { przedmiot: 'matematyka R kl. 3', ocena: '3' },
+  { przedmiot: 'fotografia', ocena: '6' },
   { przedmiot: 'Snycerstwo', ocena: '4' },
   { przedmiot: 'Zajęcia z wychowawcą', ocena: 'zal' },
   { przedmiot: 'Edukacja zdrowotna', ocena: 'zal' }
@@ -111,15 +119,18 @@ const ocenySLO = [
 const rSLO = ctx.przypiszPrzedmioty(SLO, ocenySLO, {});
 const kSLO = byKey(rSLO);
 
-eq('SLO: język polski', kSLO.jezyk_polski.przedmiot, 'Język polski');
-eq('SLO: angielski -> wiersz podstawowy', kSLO.jezyk_podstawowy.przedmiot, 'Język angielski');
-eq('SLO: francuski -> wiersz zindywidualizowany', kSLO.jezyk_dodatkowy.przedmiot, 'Język francuski');
-eq('SLO: etyka -> religia/etyka', kSLO.religia_etyka.przedmiot, 'Etyka');
+eq('SLO: język polski (mimo "kl. 3")', kSLO.jezyk_polski.przedmiot, 'język polski kl. 3');
+eq('SLO: angielski -> wiersz podstawowy', kSLO.jezyk_podstawowy.przedmiot, 'język angielski');
+eq('SLO: francuski -> wiersz zindywidualizowany', kSLO.jezyk_dodatkowy.przedmiot, 'język francuski');
+eq('SLO: etyka -> religia/etyka', kSLO.religia_etyka.przedmiot, 'etyka kl. 3');
 eq('SLO: historia', kSLO.historia.ocena, '5');
-eq('SLO: tutorial 1 -> I zaj. rozszerzone', kSLO.rozszerzone_1.przedmiot, 'Tutorial - nauki ścisłe');
-eq('SLO: tutorial 2 -> II zaj. rozszerzone', kSLO.rozszerzone_2.przedmiot, 'Tutorial - nauki społeczne');
+eq('SLO: biologia R -> I zaj. rozszerzone', kSLO.rozszerzone_1.przedmiot, 'biologia R kl. 3');
+eq('SLO: etykieta rozszerzenia bez "kl."', kSLO.rozszerzone_1.etykieta, 'biologia R');
+eq('SLO: matematyka R -> II zaj. rozszerzone', kSLO.rozszerzone_2.przedmiot, 'matematyka R kl. 3');
+ok('SLO: "matematyka" i "matematyka R" to różne wiersze',
+  kSLO.matematyka.ocena === '2' && kSLO.rozszerzone_2.ocena === '3');
 eq('SLO: kierunek wykryty', rSLO.kierunek, 'fotografia');
-eq('SLO: przedmiot kierunkowy w wierszu', kSLO.kierunkowe.przedmiot, 'Fotografia SLO');
+eq('SLO: przedmiot kierunkowy w wierszu', kSLO.kierunkowe.przedmiot, 'fotografia');
 eq('SLO: snycerstwo -> zaj. alternatywne', kSLO.alternatywne.przedmiot, 'Snycerstwo');
 ok('SLO: zajęcia z wychowawcą nie trafiają do tabeli', !rSLO.przypisania.some((p) => /wychowawc/i.test(p.przedmiot)));
 ok('SLO: uwaga o zajęciach z wychowawcą',
@@ -131,8 +142,8 @@ ok('SLO: snycerstwo bez zbędnej uwagi (jest na liście alternatywnych)',
 
 // dwa kierunki naraz -> pole puste + obie oceny do alternatywnych
 const rDwa = ctx.przypiszPrzedmioty(SLO, [
-  { przedmiot: 'Fotografia SLO', ocena: '5' },
-  { przedmiot: 'Film', ocena: '4' }
+  { przedmiot: 'fotografia', ocena: '5' },
+  { przedmiot: 'film', ocena: '4' }
 ], {});
 eq('SLO: dwa kierunki -> brak kierunku', rDwa.kierunek, null);
 ok('SLO: dwa kierunki -> uwaga', rDwa.uwagi.some((u) => /jednoznacznie/.test(u)), JSON.stringify(rDwa.uwagi));
@@ -153,20 +164,39 @@ eq('SLO: alternatywne #3', kTrzy['alternatywne#3'].przedmiot, 'Poznajemy Wrocła
 
 // stabilność slotów między semestrami
 const rStab = ctx.przypiszPrzedmioty(SLO, [
-  { przedmiot: 'Tutorial - nauki społeczne', ocena: '5' }
-], { istniejaceEtykiety: { rozszerzone_1: 'Tutorial - nauki ścisłe', rozszerzone_2: 'Tutorial - nauki społeczne' } });
-eq('SLO: tutorial wraca do swojego wiersza', byKey(rStab).rozszerzone_2.przedmiot, 'Tutorial - nauki społeczne');
+  { przedmiot: 'matematyka R kl. 4', ocena: '5' }
+], { istniejaceEtykiety: { rozszerzone_1: 'biologia R', rozszerzone_2: 'matematyka R' } });
+eq('SLO: rozszerzenie wraca do swojego wiersza mimo zmiany klasy',
+  byKey(rStab).rozszerzone_2.przedmiot, 'matematyka R kl. 4');
 ok('SLO: nie nadpisał wiersza rozszerzone_1', !byKey(rStab).rozszerzone_1);
 
 // oba języki podstawowe -> pierwszy alfabetycznie do wiersza podstawowego
 const rJez = ctx.przypiszPrzedmioty(SLO, [
-  { przedmiot: 'Język niemiecki', ocena: '4' },
-  { przedmiot: 'Język angielski', ocena: '5' }
+  { przedmiot: 'język niemiecki', ocena: '4' },
+  { przedmiot: 'język angielski', ocena: '5' }
 ], {});
 const kJez = byKey(rJez);
-eq('SLO: oba języki -> angielski podstawowy', kJez.jezyk_podstawowy.przedmiot, 'Język angielski');
-eq('SLO: oba języki -> niemiecki zindywidualizowany', kJez.jezyk_dodatkowy.przedmiot, 'Język niemiecki');
+eq('SLO: oba języki -> angielski podstawowy', kJez.jezyk_podstawowy.przedmiot, 'język angielski');
+eq('SLO: oba języki -> niemiecki zindywidualizowany', kJez.jezyk_dodatkowy.przedmiot, 'język niemiecki');
 ok('SLO: oba języki -> uwaga', rJez.uwagi.some((u) => /wi[ęe]cej ni[żz] jednego j[ęe]zyka/i.test(u)), JSON.stringify(rJez.uwagi));
+
+// tutoriale i fakultety -> zaj. alternatywne (bez uwagi "nieznany przedmiot")
+const rAlt = ctx.przypiszPrzedmioty(SLO, [
+  { przedmiot: 'Tutorial - nauki ścisłe', ocena: '5' },
+  { przedmiot: 'fakultet ceramika', ocena: '4' },
+  { przedmiot: 'historia sztuki kl. 3', ocena: '3' },
+  { przedmiot: 'konsultacje ITN', ocena: 'zal' }
+], {});
+const kAlt = byKey(rAlt);
+eq('SLO: tutorial -> zaj. alternatywne', kAlt.alternatywne.przedmiot, 'Tutorial - nauki ścisłe');
+eq('SLO: fakultet -> zaj. alternatywne', kAlt['alternatywne#2'].przedmiot, 'fakultet ceramika');
+eq('SLO: historia sztuki -> zaj. alternatywne', kAlt['alternatywne#3'].przedmiot, 'historia sztuki kl. 3');
+eq('SLO: etykieta historii sztuki bez "kl."', kAlt['alternatywne#3'].etykieta, 'historia sztuki');
+ok('SLO: konsultacje ITN nie trafiają do tabeli',
+  !rAlt.przypisania.some((p) => /ITN/.test(p.przedmiot)));
+ok('SLO: uwaga o konsultacjach ITN', rAlt.uwagi.some((u) => /ITN/.test(u)), JSON.stringify(rAlt.uwagi));
+ok('SLO: tutorial/fakultet/hist. sztuki bez uwagi "nieznany"',
+  !rAlt.uwagi.some((u) => /nie ma na żadnej znanej liście/.test(u)), JSON.stringify(rAlt.uwagi));
 
 // ---------------------------------------------------------------------------
 // 3. Routing SLSP
@@ -176,26 +206,26 @@ eq('SLSP: 10 modułów', SLSP.liczbaModulow, 10);
 eq('SLO: 8 modułów', SLO.liczbaModulow, 8);
 
 const rSLSP = ctx.przypiszPrzedmioty(SLSP, [
-  { przedmiot: 'Historia sztuki', ocena: '5' },
-  { przedmiot: 'Rzeźba', ocena: '4' },
-  { przedmiot: 'Rysunek i malarstwo', ocena: '5' },
-  { przedmiot: 'Plener', ocena: 'zal' },
-  { przedmiot: 'Tutorial - nauki ścisłe', ocena: '3' },
-  { przedmiot: 'Tutorial - nauki społeczne', ocena: '4' },
-  { przedmiot: 'Wizaż', ocena: '6' }
+  { przedmiot: 'historia sztuki kl. 3', ocena: '5' },
+  { przedmiot: 'rzeźba kl. 3', ocena: '4' },
+  { przedmiot: 'rysunek i malarstwo kl. 3', ocena: '5' },
+  { przedmiot: 'plener', ocena: 'zal' },
+  { przedmiot: 'biologia R kl. 3', ocena: '3' },
+  { przedmiot: 'historia R kl. 3', ocena: '4' },
+  { przedmiot: 'charakteryzacja i wizaż kl. 3', ocena: '6' }
 ], {});
 const kSLSP = byKey(rSLSP);
 eq('SLSP: historia sztuki ma własny wiersz', kSLSP.historia_sztuki.ocena, '5');
 eq('SLSP: rzeźba -> wiersz artystyczny, nie kierunek', kSLSP.rzezba.ocena, '4');
 eq('SLSP: rysunek i malarstwo', kSLSP.rysunek_i_malarstwo.ocena, '5');
 eq('SLSP: plener', kSLSP.plener.ocena, 'zal');
-eq('SLSP: pierwszy tutorial -> II zaj. rozszerz.', kSLSP.rozszerzone_2.przedmiot, 'Tutorial - nauki ścisłe');
-ok('SLSP: drugi tutorial nie ma miejsca -> uwaga',
-  rSLSP.uwagi.some((u) => /zaj\. rozszerzone/.test(u) && /nauki spo/.test(u)), JSON.stringify(rSLSP.uwagi));
+eq('SLSP: pierwsze rozszerzenie -> II zaj. rozszerz.', kSLSP.rozszerzone_2.przedmiot, 'biologia R kl. 3');
+ok('SLSP: drugie rozszerzenie nie ma miejsca -> uwaga',
+  rSLSP.uwagi.some((u) => /zaj\. rozszerzone/.test(u) && /historia R/.test(u)), JSON.stringify(rSLSP.uwagi));
 eq('SLSP: specjalizacja wykryta', rSLSP.kierunek, 'charakteryzacja i wizaż');
-eq('SLSP: wizaż w wierszu specjalizacji', kSLSP.specjalizacja_art.przedmiot, 'Wizaż');
+eq('SLSP: wizaż w wierszu specjalizacji', kSLSP.specjalizacja_art.przedmiot, 'charakteryzacja i wizaż kl. 3');
 ok('SLSP: brak wiersza I zaj. rozszerzone (zarezerwowany)',
-  ctx.slotyDla(SLSP, 'tutorial').length === 1, JSON.stringify(ctx.slotyDla(SLSP, 'tutorial').map((s) => s.key)));
+  ctx.slotyDla(SLSP, 'rozszerzenie').length === 1, JSON.stringify(ctx.slotyDla(SLSP, 'rozszerzenie').map((s) => s.key)));
 
 // metadane SLSP z nazwy pliku, gdy nagłówek jest ubogi
 const metaZNazwy = ctx.odczytajMetadane([['Klasyfikacja śródroczna'], [''], ['']], 'klasa 3 SLSP 2025.csv');

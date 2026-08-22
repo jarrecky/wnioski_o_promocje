@@ -49,8 +49,8 @@ var UKLAD_SLO = {
       wiersze: [
         { key: 'jezyk_dodatkowy', przedmiot: 'język angielski/niemiecki/francuski', wpisywany: true, przyjmuje: 'jezyk_dodatkowy', rozszerzalny: true }
       ].concat(WIERSZE_OGOLNOKSZTALCACE).concat([
-        { key: 'rozszerzone_1', kategoria: 'I zaj. rozszerzone',  wpisywany: true, przyjmuje: 'tutorial' },
-        { key: 'rozszerzone_2', kategoria: 'II zaj. rozszerzone', wpisywany: true, przyjmuje: 'tutorial' },
+        { key: 'rozszerzone_1', kategoria: 'I zaj. rozszerzone',  wpisywany: true, przyjmuje: 'rozszerzenie' },
+        { key: 'rozszerzone_2', kategoria: 'II zaj. rozszerzone', wpisywany: true, przyjmuje: 'rozszerzenie' },
         { key: 'alternatywne',  kategoria: 'zaj. alternatywne',   wpisywany: true, przyjmuje: 'alternatywne', rozszerzalny: true },
         { key: 'doradztwo',     kategoria: 'doradztwo zawodowe',  wpisywany: true, aliasy: ['doradztwo zawodowe', 'doradztwo'] }
       ])
@@ -82,7 +82,7 @@ var UKLAD_SLSP = {
         { key: 'jezyk_dodatkowy', przedmiot: 'język angielski/niemiecki/francuski', wpisywany: true, przyjmuje: 'jezyk_dodatkowy', rozszerzalny: true }
       ].concat(WIERSZE_OGOLNOKSZTALCACE).concat([
         { key: 'alternatywne',  kategoria: 'zaj. alternat.',    wpisywany: true, przyjmuje: 'alternatywne', rozszerzalny: true },
-        { key: 'rozszerzone_2', kategoria: 'II zaj. rozszerz.', wpisywany: true, przyjmuje: 'tutorial' }
+        { key: 'rozszerzone_2', kategoria: 'II zaj. rozszerz.', wpisywany: true, przyjmuje: 'rozszerzenie' }
       ])
     },
     {

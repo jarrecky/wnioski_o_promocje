@@ -76,14 +76,17 @@ Routing działa **osobno dla każdego ucznia**, tylko na przedmiotach, z któryc
 | każdy kolejny język | `język angielski/niemiecki/francuski` (plan zindywidualizowany) |
 | `Etyka`, `Religia` | `religia/etyka` |
 | przedmiot kierunkowy / specjalizacyjny | `kierunkowe zajęcia artyst./akad.` (SLO) lub `specjaliz. artystyczna` (SLSP) — i nagłówek `kierunek:` / `specjalizacja:` |
-| `Tutorial - …` | `I zaj. rozszerzone`, potem `II zaj. rozszerzone` (SLO). W SLSP tylko `II zaj. rozszerz.` — `I zaj. rozszerz.` jest zarezerwowane dla *historii sztuki* |
+| przedmiot z dopiskiem **`R`** (biologia R, matematyka R…) | `I zaj. rozszerzone`, potem `II zaj. rozszerzone` (SLO). W SLSP tylko `II zaj. rozszerz.` — `I zaj. rozszerz.` jest zarezerwowane dla *historii sztuki* |
+| `Tutorial - …`, `fakultet …`, `historia sztuki` (SLO) | `zaj. alternatywne` |
 | wszystko pozostałe z oceną | `zaj. alternatywne` |
-| `Zajęcia z wychowawcą`, `Edukacja zdrowotna` | brak wiersza na wniosku → **tylko uwaga pod tabelą** |
+| `Zajęcia z wychowawcą`, `Edukacja zdrowotna`, `konsultacje ITN` | brak wiersza na wniosku → **tylko uwaga pod tabelą** |
 
 Nazwy porównywane są po normalizacji: małe litery, bez polskich znaków, bez sufiksów
-`SLO`/`SLSP`/`ALA`, bez interpunkcji. `Rzeźba SLO` = `rzezba`, `Tutorial - nauki ścisłe`
-= `tutorial nauki scisle`. Dzięki temu skrypt **nie opiera się na sztywnej liście** i
-znosi zmiany nazw z roku na rok.
+`SLO`/`SLSP`/`ALA`, bez oznaczenia klasy (`kl. 2`) i bez interpunkcji:
+`Rzeźba SLO` = `rzezba`, `biologia R kl. 2` = `biologia r`. Pominięcie `kl. N` jest
+konieczne, bo ta sama pozycja nazywa się w kolejnych latach `biologia R kl. 2`,
+`biologia R kl. 3` — a musi trafiać do tego samego wiersza. Dzięki temu skrypt
+**nie opiera się na sztywnej liście** i znosi zmiany nazw z roku na rok.
 
 **Kierunek / specjalizacja** jest wykrywany automatycznie: jeżeli uczeń ma ocenę
 z **dokładnie jednego** przedmiotu pasującego do tabeli `KIERUNKI_SLO` /
@@ -139,10 +142,15 @@ Wszystko w **`Config.gs`**:
 Struktura samej tabeli (wiersze, sekcje, liczba modułów) siedzi w **`FormLayout.gs`** —
 ten plik pełni rolę szablonu, nie ma osobnych pustych plików wzorcowych.
 
-> **Do potwierdzenia po pierwszym prawdziwym przebiegu:** nazwy kolumn w Librusie nie są
-> identyczne z nazwami kierunków (`Projektowanie graficzne SLO` ↔ *grafika projektowa*,
-> `Warsztaty muzyczne` ↔ *kreacja muzyczna*, `Rzeźba SLO` ↔ *techniki rzeźbiarskie*).
-> Aliasy w `KIERUNKI_SLO` są najlepszym przybliżeniem — sprawdź je na realnych danych.
+Nazwy kierunków i specjalizacji pochodzą z `Plan_lekcji_2025-2026.pdf` — tak, jak
+funkcjonują w szkole. Pełny rejestr ustaleń (łącznie z tymi, które straciły ważność)
+jest w [`DECYZJE.md`](DECYZJE.md).
+
+> **Do potwierdzenia po pierwszym prawdziwym eksporcie:** przyjęto, że Librus będzie
+> podawał nazwy przedmiotów tak jak plan lekcji. Dotychczasowy `Klasyfikacja.csv` to
+> wersja robocza i używa innych nazw (`Fotografia SLO`, `Warsztaty muzyczne`, `Wizaż`).
+> Te, które po odcięciu sufiksu zgadzają się z planem, zadziałają; pozostałe wpadną do
+> `zaj. alternatywne` z uwagą — skrypt nigdy nie wpisze błędnego kierunku.
 
 ## Testy
 
@@ -168,6 +176,7 @@ Ten sam zestaw reguł można uruchomić w Apps Script funkcją `uruchomTesty`
 | `apps-script/WniosekBuilder.gs` | budowa i aktualizacja arkusza ucznia |
 | `apps-script/Main.gs` | skanowanie folderu, wyzwalacz, raport |
 | `apps-script/Tests.gs` | testy uruchamiane wewnątrz Apps Script |
+| `DECYZJE.md` | dziennik decyzji: wszystkie pytania o zasady i udzielone odpowiedzi, z zaznaczeniem unieważnionych |
 | `Klasyfikacja.csv` | przykładowy eksport z Librusa (dane testowe) |
 | `Plan_lekcji_2025-2026.pdf` | plan lekcji z aSc — lista przedmiotów dla każdej klasy; źródło nazw przedmiotów (str. 1–5: SLSP kl. 1–5, str. 6–9: SLO kl. 1–4) |
 | `SLO_wniosek.pdf`, `SLSP_wniosek.pdf` | oryginalne formularze — źródło struktury tabeli |

@@ -5,9 +5,13 @@
 
 /**
  * Normalizacja nazwy przedmiotu: małe litery, bez polskich znaków, bez sufiksów
- * szkoły ("SLO", "SLSP", "ALA") i bez interpunkcji.
+ * szkoły ("SLO", "SLSP", "ALA"), bez oznaczenia klasy ("kl. 2") i bez interpunkcji.
  *   "Rzeźba SLO"                -> "rzezba"
+ *   "biologia R kl. 2"          -> "biologia r"
  *   "Tutorial - nauki ścisłe"   -> "tutorial nauki scisle"
+ *
+ * Usunięcie "kl. N" jest istotne: ta sama pozycja nazywa się w kolejnych latach
+ * "biologia R kl. 2", "biologia R kl. 3" itd., a musi trafiać do tego samego wiersza.
  */
 function normalizujNazwe(nazwa) {
   return String(nazwa == null ? '' : nazwa)
@@ -15,9 +19,36 @@ function normalizujNazwe(nazwa) {
     .replace(/[ą]/g, 'a').replace(/[ć]/g, 'c').replace(/[ę]/g, 'e')
     .replace(/[ł]/g, 'l').replace(/[ń]/g, 'n').replace(/[ó]/g, 'o')
     .replace(/[ś]/g, 's').replace(/[żź]/g, 'z')
-    .replace(/\b(slo|slsp|ala)\b/g, ' ')
     .replace(/[^a-z0-9]+/g, ' ')
+    .replace(/\b(slo|slsp|ala)\b/g, ' ')
+    .replace(/\bkl\s+\d+\b/g, ' ')
+    .replace(/\s+/g, ' ')
     .trim();
+}
+
+/** Nazwa do wpisania w kropkowaną komórkę — bez oznaczenia klasy, reszta bez zmian. */
+function wyczyscNazwe(nazwa) {
+  return String(nazwa == null ? '' : nazwa)
+    .replace(/\s*\bkl\.?\s*\d+\b/gi, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+/**
+ * Czy przedmiot jest rozszerzeniem. W planie lekcji i w Librusie rozszerzenia
+ * mają samodzielne wielkie "R": "biologia R kl. 2", "język polski R kl. 3".
+ */
+function czyRozszerzenie(nazwa) {
+  return /(?:^|\s)R(?=\s|$)/.test(String(nazwa == null ? '' : nazwa));
+}
+
+/** Czy nazwa zaczyna się od któregoś ze znanych prefiksów (np. "fakultet", "tutorial"). */
+function maPrefiks(nazwaZnorm, prefiksy) {
+  for (var i = 0; i < prefiksy.length; i++) {
+    var p = normalizujNazwe(prefiksy[i]);
+    if (nazwaZnorm === p || nazwaZnorm.indexOf(p + ' ') === 0) return true;
+  }
+  return false;
 }
 
 function bazowyKlucz(key) {
@@ -131,12 +162,14 @@ function przypiszPrzedmioty(uklad, oceny, opcje) {
   var przydzial = new PrzydzialSlotow(uklad, opcje);
 
   var jezyki = [];
-  var tutoriale = [];
+  var rozszerzenia = [];
   var kandydaciKierunku = [];
   var alternatywne = [];
   var doWierszaStalego = []; // { key, wpis }
 
   // --- klasyfikacja wstępna ------------------------------------------------
+  // Kolejność ma znaczenie: rozszerzenia sprawdzamy przed językami, bo
+  // "język polski R" jest rozszerzeniem, a nie drugim językiem obcym.
   oceny.forEach(function (poz) {
     var znorm = normalizujNazwe(poz.przedmiot);
     if (!znorm) return;
@@ -145,13 +178,14 @@ function przypiszPrzedmioty(uklad, oceny, opcje) {
       uwagi.push('Przedmiot "' + poz.przedmiot + '" (ocena: ' + poz.ocena + ') nie ma wiersza na wniosku — nie został wpisany do tabeli.');
       return;
     }
+    if (czyRozszerzenie(poz.przedmiot)) { rozszerzenia.push(poz); return; }
     if (aliasy[znorm]) { doWierszaStalego.push({ key: aliasy[znorm], wpis: poz }); return; }
     if (/^jezyk\s/.test(znorm)) { jezyki.push(poz); return; }
     if (znorm === 'etyka' || znorm === 'religia') {
       doWierszaStalego.push({ key: 'religia_etyka', wpis: poz, etykieta: poz.przedmiot });
       return;
     }
-    if (/^tutorial\b/.test(znorm)) { tutoriale.push(poz); return; }
+    if (maPrefiks(znorm, PREFIKSY_ALTERNATYWNE)) { alternatywne.push(poz); return; }
 
     var k = dopasujKierunek(znorm, tabelaKierunkow);
     if (k) { kandydaciKierunku.push({ wpis: poz, kierunek: k }); return; }
@@ -162,7 +196,7 @@ function przypiszPrzedmioty(uklad, oceny, opcje) {
   function dodaj(key, wpis, etykieta) {
     przypisania.push({
       key: key,
-      etykieta: etykieta || null,
+      etykieta: etykieta ? wyczyscNazwe(etykieta) : null,
       przedmiot: wpis.przedmiot,
       ocena: wpis.ocena
     });
@@ -218,6 +252,7 @@ function przypiszPrzedmioty(uklad, oceny, opcje) {
       uwagi.push('W tabeli jest już ' + nazwaPola + ' oparty na przedmiocie "' + etykietaKierunkowa +
         '", a w tym pliku pojawia się "' + kand.wpis.przedmiot + '" (ocena: ' + kand.wpis.ocena +
         '). Nowy przedmiot wpisano do zajęć alternatywnych — sprawdź, który jest właściwy.');
+      kand.wpis.znanyKierunkowy = true;
       alternatywne.push(kand.wpis);
     } else {
       var keyK = przydzial.przydziel('kierunek', kand.wpis.przedmiot);
@@ -232,18 +267,18 @@ function przypiszPrzedmioty(uklad, oceny, opcje) {
     uwagi.push('Nie da się jednoznacznie ustalić pola "' + nazwaPola + '" — pasuje kilka przedmiotów: ' +
       kandydaciKierunku.map(function (k) { return k.wpis.przedmiot + ' (' + k.kierunek.nazwa + ')'; }).join(', ') +
       '. Pole pozostawiono puste, a oceny trafiły do zajęć alternatywnych.');
-    kandydaciKierunku.forEach(function (k) { alternatywne.push(k.wpis); });
+    kandydaciKierunku.forEach(function (k) { k.wpis.znanyKierunkowy = true; alternatywne.push(k.wpis); });
   }
 
-  // --- tutoriale -> zaj. rozszerzone ---------------------------------------
-  tutoriale.forEach(function (t) {
-    var key = przydzial.przydziel('tutorial', t.przedmiot);
+  // --- rozszerzenia ("R") -> zaj. rozszerzone -------------------------------
+  rozszerzenia.forEach(function (r) {
+    var key = przydzial.przydziel('rozszerzenie', r.przedmiot);
     if (!key) {
-      uwagi.push('Brak wolnego wiersza "zaj. rozszerzone" dla "' + t.przedmiot + '" (ocena: ' + t.ocena +
+      uwagi.push('Brak wolnego wiersza "zaj. rozszerzone" dla rozszerzenia "' + r.przedmiot + '" (ocena: ' + r.ocena +
         '). Na SLSP wiersz "I zaj. rozszerz." jest zarezerwowany dla historii sztuki — wpisz ręcznie.');
       return;
     }
-    dodaj(key, t, t.przedmiot);
+    dodaj(key, r, r.przedmiot);
   });
 
   // --- pozostałe -> zaj. alternatywne --------------------------------------
@@ -254,7 +289,10 @@ function przypiszPrzedmioty(uklad, oceny, opcje) {
       return;
     }
     dodaj(key, a, a.przedmiot);
-    if (!naLiscie(normalizujNazwe(a.przedmiot), ZAJECIA_ALTERNATYWNE)) {
+    // Przedmiot rozpoznany jako kierunkowy ma już własną uwagę o niejednoznaczności
+    // — nie dublujemy jej komunikatem "nie ma na znanej liście".
+    var aZnorm = normalizujNazwe(a.przedmiot);
+    if (!a.znanyKierunkowy && !naLiscie(aZnorm, ZAJECIA_ALTERNATYWNE) && !maPrefiks(aZnorm, PREFIKSY_ALTERNATYWNE)) {
       uwagi.push('Przedmiotu "' + a.przedmiot + '" nie ma na żadnej znanej liście — wpisano go do "zaj. alternatywne". ' +
         'Jeśli to błąd, popraw listy w Config.gs.');
     }

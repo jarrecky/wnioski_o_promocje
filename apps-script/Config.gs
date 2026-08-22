@@ -57,24 +57,25 @@ var GRADE_EMPTY = ['', '-', '—', 'brak'];
  * dopasowanie => kierunek pusty + uwaga pod tabelą.
  */
 var KIERUNKI_SLO = [
-  { nazwa: 'film',                 aliasy: ['film'] },
-  { nazwa: 'fotografia',           aliasy: ['fotografia'] },
-  { nazwa: 'grafika projektowa',   aliasy: ['grafika projektowa', 'projektowanie graficzne'] },
-  { nazwa: 'kreacja muzyczna',     aliasy: ['kreacja muzyczna', 'warsztaty muzyczne'] },
-  { nazwa: 'kreacja plastyczna',   aliasy: ['kreacja plastyczna', 'rysunek i malarstwo'] },
-  { nazwa: 'twórcze pisanie',      aliasy: ['tworcze pisanie', 'warsztaty literacko-dziennikarskie'] },
-  { nazwa: 'stylizacja i kreacja', aliasy: ['stylizacja i kreacja', 'projektowanie ubioru', 'wizaz'] },
-  { nazwa: 'teatr',                aliasy: ['teatr', 'warsztaty teatralne'] },
-  { nazwa: 'techniki rzeźbiarskie', aliasy: ['techniki rzezbiarskie', 'rzezba'] }
+  { nazwa: 'film',                  aliasy: ['film'] },
+  { nazwa: 'fotografia',            aliasy: ['fotografia'] },
+  { nazwa: 'grafika projektowa',    aliasy: ['grafika projektowa'] },
+  { nazwa: 'kreacja muzyczna',      aliasy: ['kreacja muzyczna'] },
+  { nazwa: 'kreacja plastyczna',    aliasy: ['kreacja plastyczna'] },
+  { nazwa: 'stylizacja i kreacja',  aliasy: ['stylizacja i kreacja'] },
+  { nazwa: 'teatr',                 aliasy: ['teatr'] },
+  // "techniki rzeźbiarkie" — tak (z literówką) figuruje w planie lekcji aSc.
+  { nazwa: 'techniki rzeźbiarskie', aliasy: ['techniki rzeźbiarskie', 'techniki rzeźbiarkie'] },
+  { nazwa: 'twórcze pisanie',       aliasy: ['twórcze pisanie'] }
 ];
 
 /** Specjalizacje SLSP — analogicznie do KIERUNKI_SLO. */
 var SPECJALIZACJE_SLSP = [
-  { nazwa: 'charakteryzacja i wizaż', aliasy: ['charakteryzacja i wizaz', 'charakteryzacja', 'wizaz'] },
-  { nazwa: 'fotografia artystyczna',  aliasy: ['fotografia artystyczna', 'fotografia'] },
-  { nazwa: 'projektowanie przestrzeni', aliasy: ['projektowanie przestrzeni', 'aranzacja wnetrz'] },
-  { nazwa: 'projektowanie ubioru',    aliasy: ['projektowanie ubioru'] },
-  { nazwa: 'projektowanie graficzne', aliasy: ['projektowanie graficzne'] }
+  { nazwa: 'charakteryzacja i wizaż',   aliasy: ['charakteryzacja i wizaż'] },
+  { nazwa: 'fotografia artystyczna',    aliasy: ['fotografia artystyczna'] },
+  { nazwa: 'projektowanie graficzne',   aliasy: ['projektowanie graficzne'] },
+  { nazwa: 'projektowanie przestrzeni', aliasy: ['projektowanie przestrzeni'] },
+  { nazwa: 'projektowanie ubioru',      aliasy: ['projektowanie ubioru'] }
 ];
 
 /**
@@ -92,14 +93,26 @@ var ZAJECIA_ALTERNATYWNE = [
   'poznajemy wrocławskie teatry',
   'snycerstwo',
   'zajęcia alternatywnie rozwijające',
-  'zyśkaj wiedzę'
+  'zyśkaj wiedzę',
+  // Na SLO historia sztuki nie ma własnego wiersza (to wiersz SLSP), więc trafia
+  // do zajęć alternatywnych. Na SLSP dopasuje się wcześniej do wiersza drukowanego.
+  'historia sztuki'
 ];
+
+/**
+ * Przedmioty zaczynające się od tych słów trafiają do "zaj. alternatywne"
+ * bez uwagi — to znane rodziny nazw, których pełna lista zmienia się co roku.
+ * "tutorial" jest tu świadomie: wiersze "zaj. rozszerzone" należą do
+ * przedmiotów rozszerzonych (z dopiskiem "R"), nie do tutoriali.
+ */
+var PREFIKSY_ALTERNATYWNE = ['fakultet', 'tutorial'];
 
 /**
  * Przedmioty, które w ogóle nie mają wiersza na wniosku. Trafiają wyłącznie do
  * uwag pod tabelą — nigdy nie są po cichu pomijane.
  */
 var POZA_FORMULARZEM = [
+  'konsultacje ITN',
   'zajęcia z wychowawcą',
   'godzina wychowawcza',
   'edukacja zdrowotna',

@@ -13,7 +13,7 @@ var FIXTURE_CSV = [
   'Rok szkolny 2025/2026;;;;;;;;',
   ';;;;;;;;',
   'Nr;Nazwisko i imię;Zachowanie;Nazwy zajęć edukacyjnych;;;;;Liczby ocen',
-  ';;;Historia;Język angielski;Tutorial - nauki ścisłe;Fotografia SLO;Zajęcia z wychowawcą;',
+  ';;;historia kl. 2;język angielski;biologia R kl. 2;fotografia;Zajęcia z wychowawcą;',
   '1;Nowak Anna;wzorowe;5;4;3;6;zal;',
   '2;;dobre;;;;;;',
   ';;;;;;;;',
@@ -63,24 +63,41 @@ function uruchomTesty() {
   eq('1 -> ndst', ocenaNaTekst('1').tekst, 'ndst');
   eq('zal przepisane', ocenaNaTekst('zal').tekst, 'zal');
 
+  // --- normalizacja nazw z planu lekcji -----------------------------------
+  eq('normalizacja: "kl. N" usunięte', normalizujNazwe('biologia kl. 2'), 'biologia');
+  eq('normalizacja: rozszerzenie', normalizujNazwe('język polski R kl. 3'), 'jezyk polski r');
+  eq('etykieta bez "kl."', wyczyscNazwe('biologia R kl. 2'), 'biologia R');
+  ok('wykrycie rozszerzenia "R"', czyRozszerzenie('historia R kl. 4'));
+  ok('brak fałszywego rozszerzenia', !czyRozszerzenie('rysunek i malarstwo kl. 3'));
+
   // --- routing SLO --------------------------------------------------------
   var SLO = pobierzUklad('SLO');
   var rSLO = przypiszPrzedmioty(SLO, dane.uczniowie[0].oceny, {});
   var kSLO = wgKlucza(rSLO);
   eq('historia', kSLO.historia.ocena, '5');
-  eq('angielski -> wiersz podstawowy', kSLO.jezyk_podstawowy.przedmiot, 'Język angielski');
-  eq('tutorial -> I zaj. rozszerzone', kSLO.rozszerzone_1.przedmiot, 'Tutorial - nauki ścisłe');
+  eq('angielski -> wiersz podstawowy', kSLO.jezyk_podstawowy.przedmiot, 'język angielski');
+  eq('rozszerzenie "R" -> I zaj. rozszerzone', kSLO.rozszerzone_1.przedmiot, 'biologia R kl. 2');
   eq('kierunek', rSLO.kierunek, 'fotografia');
   ok('zajęcia z wychowawcą tylko w uwagach',
     rSLO.uwagi.join(' ').indexOf('wychowawc') >= 0 && !kSLO.alternatywne);
 
+  // --- tutoriale i fakultety -> zaj. alternatywne --------------------------
+  var rAlt = przypiszPrzedmioty(SLO, [
+    { przedmiot: 'Tutorial - nauki ścisłe', ocena: '5' },
+    { przedmiot: 'fakultet ceramika', ocena: '4' }
+  ], {});
+  eq('tutorial -> zaj. alternatywne', wgKlucza(rAlt).alternatywne.przedmiot, 'Tutorial - nauki ścisłe');
+  eq('fakultet -> zaj. alternatywne', wgKlucza(rAlt)['alternatywne#2'].przedmiot, 'fakultet ceramika');
+  ok('bez uwagi "nieznany przedmiot"',
+    rAlt.uwagi.join(' ').indexOf('znanej liście') < 0);
+
   // --- routing SLSP -------------------------------------------------------
   var SLSP = pobierzUklad('SLSP');
   eq('SLSP ma 10 modułów', SLSP.liczbaModulow, 10);
-  eq('SLSP: jeden slot na tutoriale', slotyDla(SLSP, 'tutorial').length, 1);
+  eq('SLSP: jeden slot na rozszerzenia', slotyDla(SLSP, 'rozszerzenie').length, 1);
   var rSLSP = przypiszPrzedmioty(SLSP, [
-    { przedmiot: 'Historia sztuki', ocena: '5' },
-    { przedmiot: 'Wizaż', ocena: '4' }
+    { przedmiot: 'historia sztuki kl. 3', ocena: '5' },
+    { przedmiot: 'charakteryzacja i wizaż kl. 3', ocena: '4' }
   ], {});
   eq('SLSP: specjalizacja', rSLSP.kierunek, 'charakteryzacja i wizaż');
   eq('SLSP: historia sztuki', wgKlucza(rSLSP).historia_sztuki.ocena, '5');
