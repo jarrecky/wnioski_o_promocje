@@ -3,6 +3,8 @@
   "private": true,
   "description": "Google Apps Script: generator tabeli wniosku o promowanie (SLO/SLSP) z eksportu Klasyfikacja z Librusa",
   "scripts": {
-    "test": "node tests/run.js && node tests/integration.js"
+    "test": "node tests/run.js && node tests/integration.js",
+    "przyklady": "python3 narzedzia/generuj-przyklady.py",
+    "demo": "node narzedzia/uruchom-lokalnie.js"
   }
 }

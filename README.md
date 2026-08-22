@@ -152,9 +152,30 @@ jest w [`DECYZJE.md`](DECYZJE.md).
 > Te, które po odcięciu sufiksu zgadzają się z planem, zadziałają; pozostałe wpadną do
 > `zaj. alternatywne` z uwagą — skrypt nigdy nie wpisze błędnego kierunku.
 
+## Uruchomienie na próbę, bez konta Google
+
+```bash
+npm run przyklady   # generuje dwa przykładowe eksporty z Librusa do przyklady/
+npm run demo        # uruchamia skrypt na tych plikach, wyniki w przyklady/wynik/
+```
+
+`npm run demo` wykonuje **prawdziwą** funkcję `przetworzNowePliki()` z `Main.gs` —
+podstawione są wyłącznie usługi Google (Dysk, Arkusze, Właściwości), a nie logika.
+Wrzuca po kolei klasyfikację śródroczną i roczną klasy 4o SLO, więc widać, jak
+kolumny modułów **VII** i **VIII** narastają w tym samym arkuszu.
+
+Wyniki zapisywane są w dwóch postaciach: `.xlsx` (do otwarcia w Arkuszach/Excelu)
+oraz `.csv` (czytelny w gicie). Zegar jest zamrożony, żeby powtórne uruchomienie
+dawało identyczny wynik.
+
+Przykładowe pliki obejmują sytuacje, które warto zobaczyć: ucznia z dwoma
+przedmiotami kierunkowymi (kierunek zostaje pusty + uwaga), ucznia z dwoma językami
+podstawowymi, oceny niedostateczne, fakultety i rozszerzenia „R".
+
 ## Testy
 
 ```bash
+npm test                   # oba zestawy naraz
 node tests/run.js          # parsowanie CSV + routing przedmiotów (na prawdziwym Klasyfikacja.csv)
 node tests/integration.js  # warstwa arkusza: szkielet, narastanie modułów, konflikty
 ```
@@ -178,6 +199,9 @@ Ten sam zestaw reguł można uruchomić w Apps Script funkcją `uruchomTesty`
 | `apps-script/Tests.gs` | testy uruchamiane wewnątrz Apps Script |
 | `DECYZJE.md` | dziennik decyzji: wszystkie pytania o zasady i udzielone odpowiedzi, z zaznaczeniem unieważnionych |
 | `Klasyfikacja.csv` | przykładowy eksport z Librusa (dane testowe) |
+| `narzedzia/generuj-przyklady.py` | generator przykładowych eksportów z Librusa (zmyślone dane uczniów) |
+| `narzedzia/uruchom-lokalnie.js` | uruchomienie `przetworzNowePliki()` lokalnie, na namiastkach usług Google |
+| `przyklady/` | dwa przykładowe eksporty CSV i wyniki ich przetworzenia (`przyklady/wynik/`) |
 | `Plan_lekcji_2025-2026.pdf` | plan lekcji z aSc — lista przedmiotów dla każdej klasy; źródło nazw przedmiotów (str. 1–5: SLSP kl. 1–5, str. 6–9: SLO kl. 1–4) |
 | `SLO_wniosek.pdf`, `SLSP_wniosek.pdf` | oryginalne formularze — źródło struktury tabeli |
 

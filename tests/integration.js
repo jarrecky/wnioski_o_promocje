@@ -146,6 +146,12 @@ ok('poza zakresem: zgłoszone w uwagach',
   w4.uwagi.some((u) => /wykracza poza 8 modu/.test(u)), JSON.stringify(w4.uwagi));
 
 // --- metadane ---------------------------------------------------------------
+// Regresja: świeży arkusz nie ma jeszcze _meta, a Main.gs od razu sięga po
+// meta.przetworzonePliki.some(...) — brak tego pola wywracał pierwszego ucznia.
+const czysty = ctx.wczytajMeta(new Spreadsheet('bez-meta'));
+ok('meta: świeży arkusz ma listę przetworzonych plików',
+  Array.isArray(czysty.przetworzonePliki) && czysty.przetworzonePliki.length === 0,
+  JSON.stringify(czysty));
 ctx.zapiszMeta(ss, { szkola: 'SLO', uczen: 'Nowak Anna', kierunek: 'fotografia', przetworzonePliki: [{ id: 'abc', modul: 2 }] });
 const meta = ctx.wczytajMeta(ss);
 eq('meta: szkoła', meta.szkola, 'SLO');

@@ -43,7 +43,9 @@ function znajdzLubUtworzArkuszUcznia(folder, szkola, nazwisko) {
 
 function wczytajMeta(ss) {
   var ark = ss.getSheetByName(ARKUSZ_META);
-  if (!ark) return {};
+  // Świeży arkusz nie ma jeszcze _meta — zwracamy komplet pól, żeby wywołujący
+  // nie musiał sprawdzać każdego z osobna.
+  if (!ark) return { przetworzonePliki: [] };
   var dane = ark.getDataRange().getValues();
   var meta = {};
   dane.forEach(function (w) {
