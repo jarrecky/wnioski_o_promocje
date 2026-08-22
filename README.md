@@ -169,6 +169,7 @@ Ten sam zestaw reguł można uruchomić w Apps Script funkcją `uruchomTesty`
 | `apps-script/Main.gs` | skanowanie folderu, wyzwalacz, raport |
 | `apps-script/Tests.gs` | testy uruchamiane wewnątrz Apps Script |
 | `Klasyfikacja.csv` | przykładowy eksport z Librusa (dane testowe) |
+| `Plan_lekcji_2025-2026.pdf` | plan lekcji z aSc — lista przedmiotów dla każdej klasy; źródło nazw przedmiotów (str. 1–5: SLSP kl. 1–5, str. 6–9: SLO kl. 1–4) |
 | `SLO_wniosek.pdf`, `SLSP_wniosek.pdf` | oryginalne formularze — źródło struktury tabeli |
 
 ## Ograniczenia
