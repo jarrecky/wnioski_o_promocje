@@ -9,13 +9,13 @@
 const fs = require('fs');
 const path = require('path');
 const vm = require('vm');
-const { Spreadsheet } = require('./sheets-mock');
+const { Spreadsheet, BorderStyle } = require('./sheets-mock');
 
 const ROOT = path.resolve(__dirname, '..');
 const ctx = vm.createContext({
   console,
   Logger: { log: () => {} },
-  SpreadsheetApp: { getUi() { throw new Error('brak UI'); } },
+  SpreadsheetApp: { getUi() { throw new Error('brak UI'); }, BorderStyle },
   Utilities: { formatDate: () => '2026-02-01 10:00' },
 });
 for (const f of ['Config.gs', 'FormLayout.gs', 'CsvParser.gs', 'SubjectMapper.gs', 'WniosekBuilder.gs']) {
@@ -27,7 +27,7 @@ const failures = [];
 const ok = (n, c, d) => (c ? passed++ : failures.push(n + (d ? '\n      ' + d : '')));
 const eq = (n, a, e) => ok(n, Object.is(a, e), `oczekiwano: ${JSON.stringify(e)}\n      otrzymano: ${JSON.stringify(a)}`);
 
-const KOL = { KATEGORIA: 2, PRZEDMIOT: 3, MODUL1: 4 };
+const KOL = { GRUPA: 2, KATEGORIA: 3, PRZEDMIOT: 4, MODUL1: 5 };
 
 /** Odczyt komórki modułu dla danego klucza wiersza. */
 function komorkaModulu(ark, key, modul) {
@@ -43,8 +43,21 @@ function przedmiotWiersza(ark, key) {
   return ark.getRange(wiersz, KOL.PRZEDMIOT).getDisplayValue();
 }
 function tekstUwag(ark) {
-  return ark.getRange(1, KOL.KATEGORIA, ark.getLastRow(), 1).getValues().map((r) => String(r[0] || '')).join('\n');
+  return ark.getRange(1, KOL.GRUPA, ark.getLastRow(), 1).getValues().map((r) => String(r[0] || '')).join('\n');
 }
+function indeksWiersza(ark, key) {
+  const kolA = ark.getRange(1, 1, ark.getLastRow(), 1).getValues().map((r) => String(r[0] || ''));
+  return kolA.indexOf(key) + 1;
+}
+/** Styl ramki górnej krawędzi komórki modułu — 'SOLID_MEDIUM' albo 'DOTTED'. */
+function stylRamkiArk(ark, key, modul) {
+  const wiersz = indeksWiersza(ark, key);
+  const kol = KOL.MODUL1 + modul - 1;
+  const trafienia = ark.ramki.filter((z) => z.r <= wiersz && wiersz < z.r + z.nr
+    && z.c <= kol && kol < z.c + z.nc);
+  return trafienia.length ? trafienia[trafienia.length - 1].styl : null;
+}
+const stylRamki = stylRamkiArk;
 
 const SLO = ctx.pobierzUklad('SLO');
 const ss = new Spreadsheet('Wniosek_SLO_Nowak_Anna');
@@ -123,7 +136,7 @@ eq('sem2: etykieta rozszerzenia niezmieniona', przedmiotWiersza(ark, 'rozszerzon
 eq('sem2: "Gotuj i jedz" wrócił do wiersza #2', komorkaModulu(ark, 'alternatywne#2', 3), 'dst');
 eq('sem2: wiersz alternatywne #1 pusty w module III', komorkaModulu(ark, 'alternatywne', 3), '');
 eq('sem2: nie powstał kolejny wiersz alternatywny', przedmiotWiersza(ark, 'alternatywne#3'), null);
-eq('sem2: nagłówek ucznia zaktualizowany', ark.getRange(2, KOL.MODUL1).getDisplayValue(),
+eq('sem2: nagłówek ucznia zaktualizowany', ark.getRange(2, KOL.GRUPA).getDisplayValue(),
   'Uczeń: Nowak Anna   |   Klasa: 2o   |   Rok szkolny: 2026/2027');
 
 // --- konflikt: poprawiony eksport tego samego modułu ------------------------
@@ -144,6 +157,60 @@ const w4 = ctx.zapiszModul(ss, SLO,
 eq('poza zakresem: nic nie wpisano', w4.wpisane, 0);
 ok('poza zakresem: zgłoszone w uwagach',
   w4.uwagi.some((u) => /wykracza poza 8 modu/.test(u)), JSON.stringify(w4.uwagi));
+
+// --- ramki modułów wg formularza --------------------------------------------
+eq('ramki: historia obejmuje wszystkie 8 modułów',
+  JSON.stringify(ctx.zakresyModulow(ctx.wierszPoKluczu(SLO, 'historia'), 8)),
+  JSON.stringify({ grube: [[1, 8]], kropkowane: [] }));
+eq('ramki: biznes i zarządzanie tylko III-V',
+  JSON.stringify(ctx.zakresyModulow(ctx.wierszPoKluczu(SLO, 'biznes_i_zarzadzanie'), 8)),
+  JSON.stringify({ grube: [[3, 5]], kropkowane: [[1, 2], [6, 8]] }));
+eq('ramki: SLSP plener tylko III-IV',
+  JSON.stringify(ctx.zakresyModulow(ctx.wierszPoKluczu(ctx.pobierzUklad('SLSP'), 'plener'), 10)),
+  JSON.stringify({ grube: [[3, 4]], kropkowane: [[1, 2], [5, 10]] }));
+eq('ramki: w arkuszu moduł objęty ma grubą ramkę', stylRamki(ark, 'biznes_i_zarzadzanie', 4), 'SOLID_MEDIUM');
+eq('ramki: w arkuszu moduł poza zakresem ma kropkowaną', stylRamki(ark, 'biznes_i_zarzadzanie', 8), 'DOTTED');
+eq('ramki: informatyka moduł VII kropkowany', stylRamki(ark, 'informatyka', 7), 'DOTTED');
+
+// --- scalenia kolumn opisowych ----------------------------------------------
+ok('scalenia: grupa scalona pionowo przez wiele wierszy',
+  ark.scalenia.some((z) => z.c === KOL.GRUPA && z.nr >= 5),
+  JSON.stringify(ark.scalenia.filter((z) => z.c === KOL.GRUPA)));
+ok('scalenia: pierwsza sekcja SLO zajmuje obie wąskie kolumny',
+  ark.scalenia.some((z) => z.c === KOL.GRUPA && z.nc === 2 && z.nr >= 5));
+ok('scalenia: podgrupa "zajęcia ogólnokształcące" scalona pionowo',
+  ark.scalenia.some((z) => z.c === KOL.KATEGORIA && z.nr >= 5));
+ok('obroty: kolumny opisowe mają tekst pionowy',
+  ark.rotacje.some((z) => z.c === KOL.GRUPA && z.stopnie === 90));
+
+// --- ostrzeżenie o module poza zakresem --------------------------------------
+const rPoza = ctx.przypiszPrzedmioty(SLO, [{ przedmiot: 'biznes i zarządzanie', ocena: '4' }], {});
+const wPoza = ctx.zapiszModul(ss, SLO,
+  Object.assign({}, kontekst1, { modul: 8, zrodloNazwa: 'poza-zakresem.csv' }), rPoza);
+ok('poza zakresem: ocena mimo wszystko wpisana', wPoza.wpisane === 1);
+ok('poza zakresem: zgłoszone w uwagach',
+  wPoza.uwagi.some((u) => /formularz przewiduje/.test(u) && /biznes/.test(u)),
+  JSON.stringify(wPoza.uwagi));
+
+// --- szkielet SLSP (10 modułów, trzy poziomy opisu) --------------------------
+const SLSP = ctx.pobierzUklad('SLSP');
+const ssS = new Spreadsheet('Wniosek_SLSP_Test');
+const arkS = ctx.zbudujSzkielet(ssS, SLSP, {
+  uczen: 'Testowa Maja', klasa: '3', rokSzkolny: '2025/2026',
+  modul: 5, typKlasyfikacji: 'srodroczna', kierunek: null, zrodloNazwa: 'slsp.csv',
+});
+eq('SLSP: nagłówki modułów I-X',
+  arkS.getRange(5, KOL.MODUL1, 1, 10).getValues()[0].join(','), 'I,II,III,IV,V,VI,VII,VIII,IX,X');
+eq('SLSP: historia sztuki ma własny wiersz z kategorią I zaj. rozszerz.',
+  arkS.getRange(indeksWiersza(arkS, 'historia_sztuki'), KOL.KATEGORIA).getDisplayValue(), 'I zaj. rozszerz.');
+ok('SLSP: obie podgrupy scalone pionowo',
+  arkS.scalenia.filter((z) => z.c === KOL.KATEGORIA && z.nr >= 5).length >= 2,
+  JSON.stringify(arkS.scalenia.filter((z) => z.c === KOL.KATEGORIA)));
+ok('SLSP: grupa "zindywidualizowany" obejmuje sekcje ogólne i artystyczne',
+  arkS.scalenia.some((z) => z.c === KOL.GRUPA && z.nr >= 20),
+  JSON.stringify(arkS.scalenia.filter((z) => z.c === KOL.GRUPA)));
+eq('SLSP: plener — moduł V kropkowany', stylRamkiArk(arkS, 'plener', 5), 'DOTTED');
+eq('SLSP: plener — moduł III gruby', stylRamkiArk(arkS, 'plener', 3), 'SOLID_MEDIUM');
 
 // --- metadane ---------------------------------------------------------------
 // Regresja: świeży arkusz nie ma jeszcze _meta, a Main.gs od razu sięga po

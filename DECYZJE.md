@@ -94,6 +94,8 @@ do `zaj. alternatywne` z uwagą, więc skrypt nigdy nie wpisze błędnego kierun
 | D.5 | Nazwy przedmiotów zawierają oznaczenie klasy (`biologia kl. 2`), które zmienia się co roku — musi być pomijane przy dopasowaniu | `Plan_lekcji_2025-2026.pdf` |
 | D.6 | W planie figuruje `techniki rzeźbiarkie` (literówka) — obsługiwane jako alias | `Plan_lekcji_2025-2026.pdf`, str. 6–9 |
 | D.7 | Specjalizacja na SLSP zaczyna się od klasy 2; klasa 1 ma tylko przedmioty „podstawy…" | `Plan_lekcji_2025-2026.pdf`, str. 1–2 |
+| D.8 | Gruba ramka na formularzu oznacza moduły objęte danym przedmiotem, kropkowana — poza zakresem (np. biznes i zarządzanie III–V, informatyka III–VI, plener SLSP III–IV). Odczytane automatycznie przez `narzedzia/wyciagnij-moduly.py` | str. 2 obu formularzy |
+| D.9 | Kolumny opisowe na papierze są scalone pionowo, z tekstem pisanym pionowo; pierwsza sekcja SLO zajmuje obie wąskie kolumny, SLSP ma je rozdzielone | str. 2 obu formularzy |
 
 ---
 
@@ -108,7 +110,8 @@ do `zaj. alternatywne` z uwagą, więc skrypt nigdy nie wpisze błędnego kierun
 | 2.3, 2.4, 3.1, 5.1, 5.3 | `apps-script/SubjectMapper.gs` → `przypiszPrzedmioty()` |
 | D.5, D.6 | `apps-script/SubjectMapper.gs` → `normalizujNazwe()`, `czyRozszerzenie()` |
 | D.1 | `apps-script/CsvParser.gs` → `numerModulu()` |
-| D.2, D.3 | `apps-script/FormLayout.gs` → `UKLAD_SLO`, `UKLAD_SLSP` |
+| D.2, D.3, D.8 | `apps-script/FormLayout.gs` → `UKLAD_SLO`, `UKLAD_SLSP` (pole `moduly`) |
+| D.9 | `apps-script/WniosekBuilder.gs` → `zbudujSzkielet()`, `sformatujSzkielet()` |
 | 2.1 | `apps-script/WniosekBuilder.gs` → `nazwaPlikuUcznia()` |
 | 3.4 | `apps-script/WniosekBuilder.gs` → `zapiszModul()` |
 

@@ -8,7 +8,7 @@
  */
 const fs = require('fs');
 const path = require('path');
-const { Spreadsheet } = require('./sheets-mock');
+const { Spreadsheet, BorderStyle } = require('./sheets-mock');
 
 function utworzSrodowisko(opcje) {
   opcje = opcje || {};
@@ -99,6 +99,7 @@ function utworzSrodowisko(opcje) {
       return plik.__ss;
     },
     getUi: () => { throw new Error('brak UI poza arkuszem'); },
+    BorderStyle,
   };
 
   const magazyn = new Map();

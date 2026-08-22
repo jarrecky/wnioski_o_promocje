@@ -30,6 +30,14 @@ var CONFIG = {
   /** Przenosić przetworzone pliki CSV do archiwum. */
   ARCHIVE_PROCESSED: true,
 
+  /**
+   * Formularz zaznacza grubą ramką, które moduły obejmuje dany przedmiot
+   * (np. "biznes i zarządzanie" tylko III–V). Gdy ocena trafia poza ten zakres,
+   * jest wpisywana, ale dopisywana jest uwaga pod tabelą. Ustaw false, żeby
+   * wyciszyć te komunikaty.
+   */
+  OSTRZEGAJ_O_MODULE_POZA_ZAKRESEM: true,
+
   TIMEZONE: 'Europe/Warsaw'
 };
 

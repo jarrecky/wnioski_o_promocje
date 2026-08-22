@@ -88,6 +88,26 @@ konieczne, bo ta sama pozycja nazywa się w kolejnych latach `biologia R kl. 2`,
 `biologia R kl. 3` — a musi trafiać do tego samego wiersza. Dzięki temu skrypt
 **nie opiera się na sztywnej liście** i znosi zmiany nazw z roku na rok.
 
+## Wygląd tabeli
+
+Arkusz odwzorowuje układ papierowego formularza:
+
+- **kolumny opisowe scalone pionowo** — nazwa grupy („zajęcia objęte szkolnym planem
+  nauki", „zajęcia objęte zindywidualizowanym planem nauki") i podgrupy („zajęcia
+  ogólnokształcące", „zajęcia artystyczne") stoją pionowo w scalonych komórkach, tak
+  jak na papierze;
+- **ramki modułów** — moduły objęte danym przedmiotem mają **grubą** ramkę, pozostałe
+  **kropkowaną**. Np. „biznes i zarządzanie" obejmuje tylko moduły III–V, „informatyka"
+  III–VI, „edukacja dla bezpieczeństwa" I–III, a SLSP-owy „plener" tylko III–IV.
+
+Zakresy modułów **nie są wpisane ręcznie** — `narzedzia/wyciagnij-moduly.py` odczytuje
+je wprost z `SLO_wniosek.pdf` i `SLSP_wniosek.pdf` (na papierze gruba ramka to wypełniony
+prostokąt, kropkowana to linia ze wzorem kreskowania). Wynik jest wklejony jako pole
+`moduly` w `FormLayout.gs`; skrypt uruchamia się ponownie, gdy formularz się zmieni.
+
+Gdy ocena trafi do modułu spoza zakresu przewidzianego dla wiersza, **jest wpisywana**,
+ale pod tabelą pojawia się uwaga. Wyłącznik: `CONFIG.OSTRZEGAJ_O_MODULE_POZA_ZAKRESEM`.
+
 **Kierunek / specjalizacja** jest wykrywany automatycznie: jeżeli uczeń ma ocenę
 z **dokładnie jednego** przedmiotu pasującego do tabeli `KIERUNKI_SLO` /
 `SPECJALIZACJE_SLSP`, ten przedmiot trafia do wiersza kierunkowego, a jego nazwa do
@@ -199,6 +219,7 @@ Ten sam zestaw reguł można uruchomić w Apps Script funkcją `uruchomTesty`
 | `apps-script/Tests.gs` | testy uruchamiane wewnątrz Apps Script |
 | `DECYZJE.md` | dziennik decyzji: wszystkie pytania o zasady i udzielone odpowiedzi, z zaznaczeniem unieważnionych |
 | `Klasyfikacja.csv` | przykładowy eksport z Librusa (dane testowe) |
+| `narzedzia/wyciagnij-moduly.py` | odczytuje z PDF-ów, które moduły obejmuje który przedmiot (gruba vs kropkowana ramka) |
 | `narzedzia/generuj-przyklady.py` | generator przykładowych eksportów z Librusa (zmyślone dane uczniów) |
 | `narzedzia/uruchom-lokalnie.js` | uruchomienie `przetworzNowePliki()` lokalnie, na namiastkach usług Google |
 | `przyklady/` | dwa przykładowe eksporty CSV i wyniki ich przetworzenia (`przyklady/wynik/`) |

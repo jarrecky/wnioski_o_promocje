@@ -11,13 +11,17 @@
 
 var ARKUSZ_WNIOSKU = 'Wniosek';
 var ARKUSZ_META = '_meta';
-var KOL_KATEGORIA = 2;
-var KOL_PRZEDMIOT = 3;
-var KOL_PIERWSZY_MODUL = 4;
+var KOL_GRUPA = 2;
+var KOL_KATEGORIA = 3;
+var KOL_PRZEDMIOT = 4;
+var KOL_PIERWSZY_MODUL = 5;
+var WIERSZ_PIERWSZY_DANYCH = 6;
 
 var MARKER_UWAGI = '__UWAGI__';
-var MARKER_SEKCJA = '__SEKCJA__';
 var MAX_WIERSZY_UWAG = 300;
+
+var KOLOR_RAMKI = '#000000';
+var KOLOR_SIATKI = '#b7b7b7';
 
 function bezpiecznaNazwaPliku(tekst) {
   return String(tekst).replace(/[\\\/:*?"<>|]/g, '-').replace(/\s+/g, '_').trim();
@@ -77,50 +81,6 @@ function zapiszMeta(ss, meta) {
 
 // --- szkielet tabeli --------------------------------------------------------
 
-/** Buduje pustą tabelę zgodną z układem formularza. */
-function zbudujSzkielet(ss, uklad, kontekst) {
-  var ark = ss.getSheetByName(ARKUSZ_WNIOSKU) || ss.insertSheet(ARKUSZ_WNIOSKU, 0);
-  ark.clear();
-  var domyslny = ss.getSheetByName('Arkusz1') || ss.getSheetByName('Sheet1');
-  if (domyslny && domyslny.getSheetId() !== ark.getSheetId()) ss.deleteSheet(domyslny);
-
-  var n = uklad.liczbaModulow;
-  var ostatniaKol = KOL_PIERWSZY_MODUL + n - 1;
-  var wiersze = [];
-
-  wiersze.push(['__TYTUL__', 'ZREALIZOWANY MATERIAŁ PROGRAMOWY', '', uklad.polePozaTabela + ': ' + odKropek(kontekst.kierunek)]);
-  wiersze.push(['__PODTYTUL__', uklad.naglowekSzkoly.replace('\n', ' '), '',
-    'Uczeń: ' + kontekst.uczen + '   |   Klasa: ' + (kontekst.klasa || '—') + '   |   Rok szkolny: ' + (kontekst.rokSzkolny || '—')]);
-  wiersze.push(['', '', '', '']);
-  wiersze.push(['__NAGLOWEK1__', 'Przedmiot nauczania', '', 'Zrealizowane moduły (ocena słownie)']);
-
-  var naglowek2 = ['__NAGLOWEK2__', '', ''];
-  for (var i = 0; i < n; i++) naglowek2.push(RZYMSKIE[i]);
-  wiersze.push(naglowek2);
-
-  uklad.sekcje.forEach(function (sekcja) {
-    wiersze.push([MARKER_SEKCJA, sekcja.tytul, '']);
-    sekcja.wiersze.forEach(function (w) {
-      var e = etykietyWiersza(w);
-      wiersze.push([w.key, e.kategoria, e.przedmiot]);
-    });
-  });
-
-  wiersze.push(['', '', '']);
-  wiersze.push([MARKER_UWAGI, 'UWAGI — pozycje wymagające sprawdzenia', '']);
-
-  var szerokosc = ostatniaKol;
-  var siatka = wiersze.map(function (w) {
-    var kopia = w.slice();
-    while (kopia.length < szerokosc) kopia.push('');
-    return kopia.slice(0, szerokosc);
-  });
-  ark.getRange(1, 1, siatka.length, szerokosc).setValues(siatka);
-
-  sformatujSzkielet(ark, uklad, siatka.length, ostatniaKol);
-  return ark;
-}
-
 /**
  * Etykiety startowe wiersza. Wiersz "wpisywany" (kropki na papierze) ma PUSTĄ
  * kolumnę przedmiotu — inaczej drukowana etykieta zablokowałaby slot i żaden
@@ -137,43 +97,181 @@ function odKropek(wartosc) {
   return wartosc ? wartosc : '……………………………………';
 }
 
-function sformatujSzkielet(ark, uklad, liczbaWierszy, ostatniaKol) {
+/**
+ * Ciągłe zakresy modułów objętych i nieobjętych przedmiotem.
+ * Pozwala narysować ramki kilkoma wywołaniami zamiast jednego na komórkę.
+ * Funkcja czysta — testowana lokalnie.
+ */
+function zakresyModulow(wiersz, liczbaModulow) {
+  var grube = [];
+  var kropkowane = [];
+  var biezacy = null;
+  for (var m = 1; m <= liczbaModulow; m++) {
+    var wZakresie = modulWZakresie(wiersz, m);
+    if (biezacy && biezacy.wZakresie === wZakresie) {
+      biezacy.do_ = m;
+    } else {
+      biezacy = { od: m, do_: m, wZakresie: wZakresie };
+      (wZakresie ? grube : kropkowane).push(biezacy);
+    }
+  }
+  var uprosc = function (lista) {
+    return lista.map(function (z) { return [z.od, z.do_]; });
+  };
+  return { grube: uprosc(grube), kropkowane: uprosc(kropkowane) };
+}
+
+/**
+ * Rysuje ramki modułów w jednym wierszu: gruba dla modułów objętych przedmiotem,
+ * kropkowana dla pozostałych — tak jak na papierowym formularzu.
+ */
+function ramkiModulow(ark, wiersz, definicja, liczbaModulow) {
+  var zakresy = zakresyModulow(definicja, liczbaModulow);
+  var style = SpreadsheetApp.BorderStyle;
+  zakresy.grube.forEach(function (z) {
+    ark.getRange(wiersz, KOL_PIERWSZY_MODUL + z[0] - 1, 1, z[1] - z[0] + 1)
+      .setBorder(true, true, true, true, true, null, KOLOR_RAMKI, style.SOLID_MEDIUM);
+  });
+  zakresy.kropkowane.forEach(function (z) {
+    ark.getRange(wiersz, KOL_PIERWSZY_MODUL + z[0] - 1, 1, z[1] - z[0] + 1)
+      .setBorder(true, true, true, true, true, null, KOLOR_SIATKI, style.DOTTED);
+  });
+}
+
+/** Buduje pustą tabelę zgodną z układem formularza. */
+function zbudujSzkielet(ss, uklad, kontekst) {
+  var ark = ss.getSheetByName(ARKUSZ_WNIOSKU) || ss.insertSheet(ARKUSZ_WNIOSKU, 0);
+  ark.clear();
+  var domyslny = ss.getSheetByName('Arkusz1') || ss.getSheetByName('Sheet1');
+  if (domyslny && domyslny.getSheetId() !== ark.getSheetId()) ss.deleteSheet(domyslny);
+
+  var n = uklad.liczbaModulow;
+  var ostatniaKol = KOL_PIERWSZY_MODUL + n - 1;
+  var wiersze = [];
+  var pusty = function () { var r = []; for (var i = 0; i < ostatniaKol; i++) r.push(''); return r; };
+  var ustaw = function (r, kol, v) { r[kol - 1] = v; return r; };
+
+  var w1 = ustaw(pusty(), 1, '__TYTUL__');
+  ustaw(w1, KOL_GRUPA, 'ZREALIZOWANY MATERIAŁ PROGRAMOWY');
+  ustaw(w1, KOL_PIERWSZY_MODUL, uklad.polePozaTabela + ': ' + odKropek(kontekst.kierunek));
+  wiersze.push(w1);
+
+  var w2 = ustaw(pusty(), 1, '__PODTYTUL__');
+  ustaw(w2, KOL_GRUPA, opisUcznia(kontekst));
+  wiersze.push(w2);
+
+  wiersze.push(pusty());
+
+  var w4 = ustaw(pusty(), 1, '__NAGLOWEK1__');
+  ustaw(w4, KOL_GRUPA, uklad.naglowekSzkoly);
+  ustaw(w4, KOL_PRZEDMIOT, 'Przedmiot nauczania');
+  ustaw(w4, KOL_PIERWSZY_MODUL, 'Zrealizowane moduły (ocena słownie)');
+  wiersze.push(w4);
+
+  var w5 = ustaw(pusty(), 1, '__NAGLOWEK2__');
+  for (var i = 0; i < n; i++) ustaw(w5, KOL_PIERWSZY_MODUL + i, RZYMSKIE[i]);
+  wiersze.push(w5);
+
+  // Scalenia kolumn B i C wyliczamy przy budowaniu wierszy.
+  var scaleniaGrup = [];
+  var scaleniaPodgrup = [];
+  var grupaOtwarta = null;
+  uklad.sekcje.forEach(function (sekcja) {
+    var pierwszy = wiersze.length + 1;
+    if (sekcja.grupa) {
+      grupaOtwarta = { od: pierwszy, do_: pierwszy, tekst: sekcja.grupa, scalKolumny: !!sekcja.scalKolumny };
+      scaleniaGrup.push(grupaOtwarta);
+    }
+    sekcja.wiersze.forEach(function (w) {
+      var e = etykietyWiersza(w);
+      var r = ustaw(pusty(), 1, w.key);
+      ustaw(r, KOL_KATEGORIA, sekcja.podgrupa ? '' : e.kategoria);
+      ustaw(r, KOL_PRZEDMIOT, e.przedmiot);
+      wiersze.push(r);
+    });
+    var ostatni = wiersze.length;
+    if (grupaOtwarta) grupaOtwarta.do_ = ostatni;
+    if (sekcja.grupa) wiersze[pierwszy - 1][KOL_GRUPA - 1] = sekcja.grupa;
+    if (sekcja.podgrupa) {
+      wiersze[pierwszy - 1][KOL_KATEGORIA - 1] = sekcja.podgrupa;
+      scaleniaPodgrup.push({ od: pierwszy, do_: ostatni });
+    }
+  });
+
+  wiersze.push(pusty());
+  wiersze.push(ustaw(ustaw(pusty(), 1, MARKER_UWAGI), KOL_GRUPA, 'UWAGI — pozycje wymagające sprawdzenia'));
+
+  ark.getRange(1, 1, wiersze.length, ostatniaKol).setValues(wiersze);
+  sformatujSzkielet(ark, uklad, wiersze.length, ostatniaKol, scaleniaGrup, scaleniaPodgrup);
+  return ark;
+}
+
+function opisUcznia(kontekst) {
+  return 'Uczeń: ' + kontekst.uczen +
+    '   |   Klasa: ' + (kontekst.klasa || '—') +
+    '   |   Rok szkolny: ' + (kontekst.rokSzkolny || '—');
+}
+
+function sformatujSzkielet(ark, uklad, liczbaWierszy, ostatniaKol, scaleniaGrup, scaleniaPodgrup) {
+  var style = SpreadsheetApp.BorderStyle;
   ark.hideColumns(1);
-  ark.setColumnWidth(KOL_KATEGORIA, 160);
-  ark.setColumnWidth(KOL_PRZEDMIOT, 240);
-  for (var c = KOL_PIERWSZY_MODUL; c <= ostatniaKol; c++) ark.setColumnWidth(c, 58);
+  ark.setColumnWidth(KOL_GRUPA, 34);
+  ark.setColumnWidth(KOL_KATEGORIA, 34);
+  ark.setColumnWidth(KOL_PRZEDMIOT, 250);
+  for (var c = KOL_PIERWSZY_MODUL; c <= ostatniaKol; c++) ark.setColumnWidth(c, 60);
 
-  ark.getRange(1, KOL_KATEGORIA, 1, 2).merge().setFontWeight('bold').setFontSize(11);
-  ark.getRange(1, KOL_PIERWSZY_MODUL, 1, ostatniaKol - KOL_PIERWSZY_MODUL + 1).merge()
-    .setHorizontalAlignment('left');
-  ark.getRange(2, KOL_KATEGORIA, 1, 2).merge().setFontWeight('bold');
-  ark.getRange(2, KOL_PIERWSZY_MODUL, 1, ostatniaKol - KOL_PIERWSZY_MODUL + 1).merge();
-  ark.getRange(4, KOL_KATEGORIA, 2, 2).merge()
+  var szerModulow = ostatniaKol - KOL_PIERWSZY_MODUL + 1;
+
+  ark.getRange(1, KOL_GRUPA, 1, KOL_PRZEDMIOT - KOL_GRUPA + 1).merge()
+    .setFontWeight('bold').setFontSize(11);
+  ark.getRange(1, KOL_PIERWSZY_MODUL, 1, szerModulow).merge().setHorizontalAlignment('left');
+  ark.getRange(2, KOL_GRUPA, 1, ostatniaKol - KOL_GRUPA + 1).merge().setHorizontalAlignment('left');
+
+  ark.getRange(4, KOL_GRUPA, 2, KOL_KATEGORIA - KOL_GRUPA + 1).merge()
     .setFontWeight('bold').setHorizontalAlignment('center').setVerticalAlignment('middle');
-  ark.getRange(4, KOL_PIERWSZY_MODUL, 1, ostatniaKol - KOL_PIERWSZY_MODUL + 1).merge()
+  ark.getRange(4, KOL_PRZEDMIOT, 2, 1).merge()
+    .setFontWeight('bold').setHorizontalAlignment('center').setVerticalAlignment('middle');
+  ark.getRange(4, KOL_PIERWSZY_MODUL, 1, szerModulow).merge()
     .setFontWeight('bold').setHorizontalAlignment('center');
-  ark.getRange(5, KOL_PIERWSZY_MODUL, 1, ostatniaKol - KOL_PIERWSZY_MODUL + 1)
+  ark.getRange(5, KOL_PIERWSZY_MODUL, 1, szerModulow)
     .setFontWeight('bold').setHorizontalAlignment('center');
+  ark.getRange(4, KOL_GRUPA, 2, ostatniaKol - KOL_GRUPA + 1)
+    .setBorder(true, true, true, true, true, true, KOLOR_RAMKI, style.SOLID);
 
-  var zakresTabeli = ark.getRange(4, KOL_KATEGORIA, liczbaWierszy - 3, ostatniaKol - 1);
-  zakresTabeli.setBorder(true, true, true, true, true, true);
-  zakresTabeli.setVerticalAlignment('middle');
-  ark.getRange(1, KOL_KATEGORIA, liczbaWierszy, 2).setWrap(true);
-  ark.getRange(6, KOL_PIERWSZY_MODUL, liczbaWierszy - 5, ostatniaKol - KOL_PIERWSZY_MODUL + 1)
-    .setHorizontalAlignment('center');
+  // Kolumny opisowe: scalenia pionowe grup i podgrup, tekst pionowy jak na papierze.
+  scaleniaGrup.forEach(function (z) {
+    var szer = z.scalKolumny ? (KOL_KATEGORIA - KOL_GRUPA + 1) : 1;
+    var zakres = ark.getRange(z.od, KOL_GRUPA, z.do_ - z.od + 1, szer);
+    zakres.merge().setTextRotation(90)
+      .setHorizontalAlignment('center').setVerticalAlignment('middle')
+      .setFontStyle('italic').setBackground('#efefef').setWrap(true);
+  });
+  scaleniaPodgrup.forEach(function (z) {
+    ark.getRange(z.od, KOL_KATEGORIA, z.do_ - z.od + 1, 1).merge().setTextRotation(90)
+      .setHorizontalAlignment('center').setVerticalAlignment('middle')
+      .setFontStyle('italic').setBackground('#efefef').setWrap(true);
+  });
+  ark.getRange(WIERSZ_PIERWSZY_DANYCH, KOL_KATEGORIA, liczbaWierszy - WIERSZ_PIERWSZY_DANYCH + 1, 1)
+    .setFontSize(9);
 
-  // wiersze sekcji na szaro, przez całą szerokość
+  // Ramki wierszy danych: opis solidny, moduły wg zakresu z formularza.
   var klucze = ark.getRange(1, 1, liczbaWierszy, 1).getValues();
   for (var r = 0; r < klucze.length; r++) {
     var key = String(klucze[r][0]);
-    if (key === MARKER_SEKCJA) {
-      ark.getRange(r + 1, KOL_KATEGORIA, 1, ostatniaKol - 1).merge()
-        .setBackground('#efefef').setFontWeight('bold').setFontStyle('italic');
-    } else if (key === MARKER_UWAGI) {
-      ark.getRange(r + 1, KOL_KATEGORIA, 1, ostatniaKol - 1).merge()
-        .setBackground('#fff2cc').setFontWeight('bold');
-    }
+    if (!key || key.indexOf('__') === 0) continue;
+    var wiersz = r + 1;
+    ark.getRange(wiersz, KOL_GRUPA, 1, KOL_PRZEDMIOT - KOL_GRUPA + 1)
+      .setBorder(true, true, true, true, true, null, KOLOR_RAMKI, style.SOLID);
+    ark.getRange(wiersz, KOL_PRZEDMIOT).setWrap(true).setVerticalAlignment('middle');
+    ramkiModulow(ark, wiersz, wierszPoKluczu(uklad, key), uklad.liczbaModulow);
   }
+
+  var wU = wierszUwag(ark);
+  if (wU > 0) {
+    ark.getRange(wU, KOL_GRUPA, 1, ostatniaKol - KOL_GRUPA + 1).merge()
+      .setBackground('#fff2cc').setFontWeight('bold');
+  }
+
   ark.setFrozenRows(5);
   ark.setFrozenColumns(KOL_PRZEDMIOT);
 }
@@ -232,9 +330,11 @@ function wstawWierszRozszerzony(ark, uklad, key, ostatniaKol) {
   var nowy = wiersz + 1;
   ark.getRange(nowy, 1).setValue(key);
   ark.getRange(nowy, KOL_KATEGORIA).setValue(wzorzec ? etykietyWiersza(wzorzec).kategoria : '');
-  ark.getRange(nowy, KOL_KATEGORIA, 1, ostatniaKol - 1).setBorder(true, true, true, true, true, true);
+  ark.getRange(nowy, KOL_GRUPA, 1, KOL_PRZEDMIOT - KOL_GRUPA + 1)
+    .setBorder(true, true, true, true, true, null, KOLOR_RAMKI, SpreadsheetApp.BorderStyle.SOLID);
   ark.getRange(nowy, KOL_PIERWSZY_MODUL, 1, ostatniaKol - KOL_PIERWSZY_MODUL + 1)
     .setHorizontalAlignment('center');
+  ramkiModulow(ark, nowy, wzorzec, uklad.liczbaModulow);
   return nowy;
 }
 
@@ -285,6 +385,16 @@ function zapiszModul(ss, uklad, kontekst, wynikRoutingu) {
     if (przelicz.uwaga) uwagi.push('„' + p.przedmiot + '”: ' + przelicz.uwaga);
     if (!przelicz.tekst) return;
 
+    // Formularz zaznacza grubą ramką, które moduły obejmuje dany przedmiot.
+    // Ocena poza tym zakresem nie jest gubiona, ale wymaga sprawdzenia.
+    var definicja = wierszPoKluczu(uklad, p.key);
+    if (CONFIG.OSTRZEGAJ_O_MODULE_POZA_ZAKRESEM && !modulWZakresie(definicja, kontekst.modul)) {
+      uwagi.push('Przedmiot „' + p.przedmiot + '” ma ocenę w module ' + RZYMSKIE[kontekst.modul - 1] +
+        ', a formularz przewiduje dla tego wiersza moduły ' +
+        (definicja && definicja.moduly ? definicja.moduly.map(function (m) { return RZYMSKIE[m - 1]; }).join(', ') : '—') +
+        '. Ocena została wpisana — sprawdź, czy trafiła we właściwy wiersz.');
+    }
+
     var cel = ark.getRange(wiersz, kolModulu);
     var stara = String(cel.getDisplayValue()).trim();
     if (stara === '') {
@@ -305,8 +415,7 @@ function zapiszModul(ss, uklad, kontekst, wynikRoutingu) {
     }
   }
 
-  ark.getRange(2, KOL_PIERWSZY_MODUL).setValue(
-    'Uczeń: ' + kontekst.uczen + '   |   Klasa: ' + (kontekst.klasa || '—') + '   |   Rok szkolny: ' + (kontekst.rokSzkolny || '—'));
+  ark.getRange(2, KOL_GRUPA).setValue(opisUcznia(kontekst));
 
   dopiszUwagi(ark, uklad, kontekst, uwagi, ostatniaKol);
   return { wpisane: wpisane, uwagi: uwagi };
@@ -330,11 +439,11 @@ function dopiszUwagi(ark, uklad, kontekst, uwagi, ostatniaKol) {
   }
 
   ark.insertRowsAfter(wU, linie.length);
-  var blok = ark.getRange(wU + 1, KOL_KATEGORIA, linie.length, ostatniaKol - 1);
+  var blok = ark.getRange(wU + 1, KOL_GRUPA, linie.length, ostatniaKol - KOL_GRUPA + 1);
   blok.breakApart();
-  ark.getRange(wU + 1, KOL_KATEGORIA, linie.length, 1).setValues(linie);
+  ark.getRange(wU + 1, KOL_GRUPA, linie.length, 1).setValues(linie);
   blok.mergeAcross().setWrap(true).setVerticalAlignment('top').setFontSize(9);
-  ark.getRange(wU + 1, KOL_KATEGORIA).setFontWeight('bold');
+  ark.getRange(wU + 1, KOL_GRUPA).setFontWeight('bold');
 
   var nadmiar = ark.getLastRow() - (wU + MAX_WIERSZY_UWAG);
   if (nadmiar > 0) ark.deleteRows(wU + MAX_WIERSZY_UWAG + 1, nadmiar);

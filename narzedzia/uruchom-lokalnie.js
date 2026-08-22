@@ -67,9 +67,15 @@ for (const plik of wyjscie.pliki) {
     // Tylko arkusz "Wniosek" ma techniczną kolumnę A z kluczem wiersza —
     // w eksporcie jest zbędna. Raport ma dane już od pierwszej kolumny.
     const odKol = s.getName() === 'Wniosek' ? 1 : 0;
+    const przesun = (z) => ({ ...z, c: z.c - odKol });
     return {
       nazwa: s.getName(),
       wiersze: s.data.map((r) => (r || []).slice(odKol).map((v) => (v == null ? '' : String(v)))),
+      scalenia: s.scalenia.filter((z) => z.c > odKol).map(przesun),
+      rotacje: s.rotacje.filter((z) => z.c > odKol).map(przesun),
+      ramki: s.ramki.filter((z) => z.c > odKol).map(przesun),
+      tla: s.tla.filter((z) => z.c > odKol).map(przesun),
+      szerokosci: [...s.szerokosci].filter(([k]) => k > odKol).map(([k, v]) => [k - odKol, v]),
     };
   });
   // Zegar w mocku stoi, więc oba przebiegi tworzą raport o tej samej nazwie.

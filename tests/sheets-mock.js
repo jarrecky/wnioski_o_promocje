@@ -40,13 +40,51 @@ class Range {
   getDisplayValue() { const v = this.getValue(); return v === undefined || v === null ? '' : String(v); }
 }
 
-// Metody formatujące: łańcuchowe no-opy.
-const NOOP_RANGE = ['merge', 'mergeAcross', 'breakApart', 'setBorder', 'setBackground', 'setFontWeight',
-  'setFontStyle', 'setFontSize', 'setHorizontalAlignment', 'setVerticalAlignment', 'setWrap', 'setNumberFormat'];
+// Formatowanie, które ma znaczenie dla wyglądu wyniku, jest ZAPAMIĘTYWANE —
+// dzięki temu eksport do .xlsx odtwarza dokładnie to, o co poprosił kod skryptu.
+Range.prototype.merge = function () {
+  this.sheet.scalenia.push({ r: this.r, c: this.c, nr: this.nr, nc: this.nc });
+  return this;
+};
+Range.prototype.mergeAcross = function () {
+  for (let i = 0; i < this.nr; i++) {
+    this.sheet.scalenia.push({ r: this.r + i, c: this.c, nr: 1, nc: this.nc });
+  }
+  return this;
+};
+Range.prototype.breakApart = function () {
+  const r1 = this.r, r2 = this.r + this.nr - 1, c1 = this.c, c2 = this.c + this.nc - 1;
+  this.sheet.scalenia = this.sheet.scalenia.filter(
+    (m) => m.r + m.nr - 1 < r1 || m.r > r2 || m.c + m.nc - 1 < c1 || m.c > c2);
+  return this;
+};
+Range.prototype.setTextRotation = function (stopnie) {
+  this.sheet.rotacje.push({ r: this.r, c: this.c, nr: this.nr, nc: this.nc, stopnie });
+  return this;
+};
+Range.prototype.setBorder = function (gora, lewo, dol, prawo, pion, poziom, kolor, styl) {
+  this.sheet.ramki.push({
+    r: this.r, c: this.c, nr: this.nr, nc: this.nc,
+    kolor: kolor || '#000000', styl: String(styl || 'SOLID'),
+  });
+  return this;
+};
+Range.prototype.setBackground = function (kolor) {
+  this.sheet.tla.push({ r: this.r, c: this.c, nr: this.nr, nc: this.nc, kolor });
+  return this;
+};
+
+// Reszta formatowania nie wpływa na to, co sprawdzamy — łańcuchowe no-opy.
+const NOOP_RANGE = ['setFontWeight', 'setFontStyle', 'setFontSize',
+  'setHorizontalAlignment', 'setVerticalAlignment', 'setWrap', 'setNumberFormat'];
 for (const m of NOOP_RANGE) Range.prototype[m] = function () { return this; };
 
 class Sheet {
-  constructor(name) { this.name = name; this.data = []; this.hidden = false; }
+  constructor(name) {
+    this.name = name; this.data = []; this.hidden = false;
+    this.scalenia = []; this.rotacje = []; this.ramki = []; this.tla = [];
+    this.szerokosci = new Map();
+  }
   getName() { return this.name; }
   setName(n) { this.name = n; return this; }
   getSheetId() { return this.name; }
@@ -62,12 +100,22 @@ class Sheet {
   getLastColumn() { return Math.max(1, ...this.data.map((r) => (r || []).length)); }
   getRange(r, c, nr = 1, nc = 1) { return new Range(this, r, c, nr, nc); }
   getDataRange() { return new Range(this, 1, 1, Math.max(1, this.getLastRow()), this.getLastColumn()); }
-  insertRowAfter(r) { this.data.splice(r, 0, []); return this; }
-  insertRowsAfter(r, n) { for (let i = 0; i < n; i++) this.data.splice(r, 0, []); return this; }
-  deleteRows(r, n) { this.data.splice(r - 1, n); return this; }
+  przesun(odWiersza, delta) {
+    for (const lista of [this.scalenia, this.rotacje, this.ramki, this.tla]) {
+      for (const z of lista) if (z.r > odWiersza) z.r += delta;
+    }
+  }
+  insertRowAfter(r) { this.data.splice(r, 0, []); this.przesun(r, 1); return this; }
+  insertRowsAfter(r, n) {
+    for (let i = 0; i < n; i++) this.data.splice(r, 0, []);
+    this.przesun(r, n);
+    return this;
+  }
+  deleteRows(r, n) { this.data.splice(r - 1, n); this.przesun(r + n - 1, -n); return this; }
   hideSheet() { this.hidden = true; return this; }
 }
-for (const m of ['hideColumns', 'setColumnWidth', 'setFrozenRows', 'setFrozenColumns', 'setRowHeight'])
+Sheet.prototype.setColumnWidth = function (kol, szer) { this.szerokosci.set(kol, szer); return this; };
+for (const m of ['hideColumns', 'setFrozenRows', 'setFrozenColumns', 'setRowHeight'])
   Sheet.prototype[m] = function () { return this; };
 
 class Spreadsheet {
@@ -84,4 +132,8 @@ class Spreadsheet {
   deleteSheet(s) { this.sheets = this.sheets.filter((x) => x !== s); return this; }
 }
 
-module.exports = { Spreadsheet, Sheet, Range };
+/** Stałe stylów ramek — takie same identyfikatory jak w SpreadsheetApp. */
+const BorderStyle = Object.fromEntries(
+  ['DOTTED', 'DASHED', 'SOLID', 'SOLID_MEDIUM', 'SOLID_THICK', 'DOUBLE'].map((s) => [s, s]));
+
+module.exports = { Spreadsheet, Sheet, Range, BorderStyle };
