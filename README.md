@@ -184,9 +184,10 @@ podstawione są wyłącznie usługi Google (Dysk, Arkusze, Właściwości), a ni
 Wrzuca po kolei klasyfikację śródroczną i roczną klasy 4o SLO, więc widać, jak
 kolumny modułów **VII** i **VIII** narastają w tym samym arkuszu.
 
-Wyniki zapisywane są w dwóch postaciach: `.xlsx` (do otwarcia w Arkuszach/Excelu)
-oraz `.csv` (czytelny w gicie). Zegar jest zamrożony, żeby powtórne uruchomienie
-dawało identyczny wynik.
+Wyniki zapisywane są w trzech postaciach: `.html` (podgląd wyglądu — scalenia, tekst
+pionowy i ramki modułów, do otwarcia w przeglądarce), `.xlsx` (do otwarcia w
+Arkuszach/Excelu) oraz `.csv` (czytelny w gicie). Zegar jest zamrożony, żeby powtórne
+uruchomienie dawało identyczny wynik.
 
 Przykładowe pliki obejmują sytuacje, które warto zobaczyć: ucznia z dwoma
 przedmiotami kierunkowymi (kierunek zostaje pusty + uwaga), ucznia z dwoma językami
@@ -222,6 +223,7 @@ Ten sam zestaw reguł można uruchomić w Apps Script funkcją `uruchomTesty`
 | `narzedzia/wyciagnij-moduly.py` | odczytuje z PDF-ów, które moduły obejmuje który przedmiot (gruba vs kropkowana ramka) |
 | `narzedzia/generuj-przyklady.py` | generator przykładowych eksportów z Librusa (zmyślone dane uczniów) |
 | `narzedzia/uruchom-lokalnie.js` | uruchomienie `przetworzNowePliki()` lokalnie, na namiastkach usług Google |
+| `narzedzia/podglad-html.js` | podgląd HTML arkusza wynikowego (odtwarza scalenia, obrót tekstu i ramki) |
 | `przyklady/` | dwa przykładowe eksporty CSV i wyniki ich przetworzenia (`przyklady/wynik/`) |
 | `Plan_lekcji_2025-2026.pdf` | plan lekcji z aSc — lista przedmiotów dla każdej klasy; źródło nazw przedmiotów (str. 1–5: SLSP kl. 1–5, str. 6–9: SLO kl. 1–4) |
 | `SLO_wniosek.pdf`, `SLSP_wniosek.pdf` | oryginalne formularze — źródło struktury tabeli |

@@ -215,8 +215,8 @@ function opisUcznia(kontekst) {
 function sformatujSzkielet(ark, uklad, liczbaWierszy, ostatniaKol, scaleniaGrup, scaleniaPodgrup) {
   var style = SpreadsheetApp.BorderStyle;
   ark.hideColumns(1);
-  ark.setColumnWidth(KOL_GRUPA, 34);
-  ark.setColumnWidth(KOL_KATEGORIA, 34);
+  ark.setColumnWidth(KOL_GRUPA, 40);
+  ark.setColumnWidth(KOL_KATEGORIA, 74);
   ark.setColumnWidth(KOL_PRZEDMIOT, 250);
   for (var c = KOL_PIERWSZY_MODUL; c <= ostatniaKol; c++) ark.setColumnWidth(c, 60);
 

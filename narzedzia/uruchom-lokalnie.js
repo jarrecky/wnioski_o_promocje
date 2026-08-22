@@ -8,14 +8,15 @@
  *
  *   node narzedzia/uruchom-lokalnie.js
  *
- * Wyniki lądują w przyklady/wynik/ jako .csv (do przeglądania w gicie)
- * oraz .xlsx (do otwarcia w Arkuszach/Excelu).
+ * Wyniki lądują w przyklady/wynik/ jako .csv (do przeglądania w gicie),
+ * .xlsx (do otwarcia w Arkuszach/Excelu) i .html (podgląd wyglądu).
  */
 const fs = require('fs');
 const path = require('path');
 const vm = require('vm');
 const { execFileSync } = require('child_process');
 const { utworzSrodowisko } = require('../tests/drive-mock');
+const { podgladPliku } = require('./podglad-html');
 
 const ROOT = path.resolve(__dirname, '..');
 const WYNIK = path.join(ROOT, 'przyklady', 'wynik');
@@ -88,6 +89,7 @@ for (const plik of wyjscie.pliki) {
     .map((r) => r.map((v) => (/[;"\n]/.test(v) ? '"' + v.replace(/"/g, '""') + '"' : v)).join(';'))
     .join('\n');
   fs.writeFileSync(path.join(WYNIK, bazowa + '.csv'), csv + '\n', 'utf8');
+  fs.writeFileSync(path.join(WYNIK, bazowa + '.html'), podgladPliku({ nazwa: bazowa, arkusze }), 'utf8');
   doXlsx.push({ nazwa: bazowa, arkusze });
   console.log('   ' + bazowa + '  (' + arkusze[0].wiersze.length + ' wierszy)');
 }
